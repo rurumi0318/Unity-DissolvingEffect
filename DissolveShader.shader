@@ -53,10 +53,6 @@
 			// texture and color
 			fixed4 color = tex2D(_MainTex, IN.uv_MainTex) * _Color;
 
-			// get noise by world position, snoise return -1~1
-			// make the noise 0~1
-			float ns = snoise(IN.worldPos * _NoiseFreq) / 2 + 0.5f;
-
 			// calculate distance between current position and dissolve point
 			float dist = distance(IN.worldPos, _DissolvePoint);
 
@@ -69,10 +65,21 @@
 			// Inverse
 			finalValue = lerp(finalValue, 1 - finalValue, _Inverse);
 
-			fixed border = ns + _Border;
-			clip(border - finalValue);
+			// snoise is expensive
+			// do not call it if we are sure the final value is large enough
+			if (finalValue > _Border + 1) {
+				discard;
+			}
 
-			// after clip, ns should be finalValue ~ (finalValue - 0.5)
+			// get noise by world position, snoise return -1~1
+			// make the noise 0~1
+			float ns = snoise(IN.worldPos * _NoiseFreq) / 2 + 0.5f;
+
+			if (ns + _Border < finalValue) {
+				discard;
+			}
+
+			// after clip, ns should be finalValue ~ (finalValue - _Border)
 			// if (finalValue >= ns)
 			//		isBorder
 			// else
